@@ -1,12 +1,12 @@
-**Debian based hardening [v2]**  
-**Guide de Durcissement (Hardening) pour Systèmes Debian**  
+**Debian based hardening [v2]**
+# Guide de Durcissement (Hardening) pour Systèmes Debian
 Ce document est un guide opérationnel destiné aux administrateurs système pour sécuriser les serveurs basés sur la distribution Debian. Il suit le principe du moindre privilège, de la réduction de la surface d'attaque et de la défense en profondeur.  
 ATTENTION : L'application de ces paramètres doit toujours être testée dans un environnement de pré-production avant toute mise en production. Certaines restrictions peuvent altérer le fonctionnement de vos services légitimes.  
-**Phase 1: Protection des Systèmes de Fichiers**  
+## Phase 1: Protection des Systèmes de Fichiers  
 L'objectif est d'empêcher le montage de systèmes de fichiers obsolètes ou non sécurisés et de restreindre les permissions sur partitions temporaires ou utilisateurs.  
-**1.1 Désactivation des modules de systèmes de fichiers non utilisés**  
+### 1.1 Désactivation des modules de systèmes de fichiers non utilisés  
 Ces systèmes de fichiers (souvent liés à d'anciens supports ou périphériques) augmentent la surface d'attaque du noyau.  
-**Action :** Blacklister les modules.  
+**Action :** Blacklister les modules.
 ```bash
 sudo bash -c 'cat <<EOF > /etc/modprobe.d/hardening-fs.conf  
  install cramfs /bin/false  
@@ -39,7 +39,7 @@ sudo bash -c \
  done'  
 ```
    
-**1.2 Sécurisation des partitions**  
+### 1.2 Sécurisation des partitions  
 🛑Attention: Cette partie est uniquement applicable si la partition existe.  
 Il faut seulement ajouter les parametres correspondantes en fin de lignes existante. Ne pas ajouter de ligne dans le fichier fstab si elle est absente.  
 Limiter les droits d'exécution (noexec), la création de périphériques (nodev) et les permissions SUID (nosuid) sur les dossiers sensibles.  
@@ -59,25 +59,25 @@ sudo mount -o remount /tmp
  sudo mount -o remount /home  
  sudo mount -o remount /var/log/audit  
 ```
-**Phase 2: Gestion Sécurisée des Paquets**  
-**2.1 S’assurer que les repos utilisés sont correctes**  
+### Phase 2: Gestion Sécurisée des Paquets  
+#### 2.1 S’assurer que les repos utilisés sont correctes  
 ```bash
 cat /etc/apt/sources.{list,list.d/*}
 ```
-**2.2 Limitation des dépendances faibles**  
+#### 2.2 Limitation des dépendances faibles  
 Pour éviter d'installer des paquets inutiles (surface d'attaque supplémentaire), désactivez les "Recommends" et "Suggests" d'APT.  
 ```bash
 printf '%s\n%s\n' 'APT::Install-Recommends "0";' 'APT::Install-Suggests "0";' | \  
  sudo tee /etc/apt/apt.conf.d/60-no-weak-dependencies  
 ```
-**2.3 Sécurisation des dépôts APT**  
+#### 2.3 Sécurisation des dépôts APT  
 Restreindre la modification des fichiers de dépôts à l'utilisateur root.  
 ```bash
 sudo chown -R root:root /etc/apt  
  sudo find /etc/apt -type d -exec chmod 755 {} +  
  sudo find /etc/apt -type f -exec chmod 644 {} +  
 ```
-**2.4 Mises à jour du système**  
+#### 2.4 Mises à jour du système  
 S'assurer que le système dispose des derniers correctifs de sécurité.  
 ```bash
 sudo apt update && sudo apt full-upgrade -y  
@@ -86,10 +86,10 @@ sudo apt update && sudo apt full-upgrade -y
  # Vérifier si un redémarrage complet est nécessaire  
  [ -f /var/run/reboot-required ] && cat /var/run/reboot-required && sudo reboot  
 ```
-**Phase 3: Contrôle d'Accès Obligatoire (AppArmor)**  
+### Phase 3: Contrôle d'Accès Obligatoire (AppArmor)  
 AppArmor confine les programmes à un ensemble limité de ressources, atténuant ainsi les attaques de type 0-day.  
-**3.1 Installation et activation dans le GRUB**  
-# Installation  
+#### 3.1 Installation et activation dans le GRUB  
+**Installation**  
 ```bash
  sudo apt update && sudo apt install -y apparmor apparmor-utils  
    
@@ -99,24 +99,24 @@ AppArmor confine les programmes à un ensemble limité de ressources, atténuant
  # Mettre à jour GRUB  
  sudo update-grub  
 ```
-**3.2 Mise en mode "Enforce" et restriction des namespaces**  
-# Passer tous les profils en mode restrictif  
+#### 3.2 Mise en mode "Enforce" et restriction des namespaces  
+**Passer tous les profils en mode restrictif**  
 ```bash
  sudo aa-enforce /etc/apparmor.d/*  
    
- # Restreindre les namespaces non privilégiés  
+**Restreindre les namespaces non privilégiés**  
  echo "kernel.apparmor_restrict_unprivileged_unconfined = 1" | sudo tee -a /etc/sysctl.d/60-apparmor-namespace.conf  
  sudo sysctl --system  
 ```
 *Note : Si une application dysfonctionne, utilisez * *aa-complain* * pour la passer en mode apprentissage, analysez les logs (* *journalctl -e | grep 'apparmor="DENIED"'* *), puis générez un profil avec * *aa-genprof* *.*  
-**Phase 4: Sécurisation du Bootloader**  
+## Phase 4: Sécurisation du Bootloader
 Empêcher un utilisateur local non privilégié de modifier les paramètres de démarrage (comme le passage en single-user mode). 
 ```bash
 sudo chown root:root /boot/grub/grub.cfg  
  sudo chmod u-x,go-rwx /boot/grub/grub.cfg  
 ```
-**Phase 5: Durcissement du Noyau et des Processus**  
-**5.1 Optimisation des paramètres Sysctl**  
+## Phase 5: Durcissement du Noyau et des Processus  
+#### 5.1 Optimisation des paramètres Sysctl  
 Ce fichier configure la randomisation de l'espace d'adressage (ASLR), restreint l'accès aux journaux du noyau, et protège les liens symboliques/physiques.  
 ```bash
 sudo bash -c 'cat <<EOF > /etc/sysctl.d/60-process-hardening.conf  
@@ -130,14 +130,14 @@ sudo bash -c 'cat <<EOF > /etc/sysctl.d/60-process-hardening.conf
  EOF'  
  sudo sysctl --system  
 ```
-**5.2 Restriction des Core Dumps et Outils de Débogage**  
+#### 5.2 Restriction des Core Dumps et Outils de Débogage  
 Empêcher le système de vider la RAM sur le disque lors d'un crash (pourrait contenir des mots de passe).  
 ```bash
 echo "* hard core 0" | sudo tee -a /etc/security/limits.d/60-disable-core-dumps.conf  
  # Suppression de prelink et apport  
  sudo bach -c 'prelink -ua; apt purge prelink apport &>/dev/null'  
 ```
-**5.3 Installer auditd**  
+#### 5.3 Installer auditd  
 ```bash
 sudo apt update && sudo apt install auditd audispd-plugins  
  sudo systemctl enable auditd  
@@ -147,7 +147,7 @@ sudo apt update && sudo apt install auditd audispd-plugins
  # Mettre à jour GRUB  
  sudo update-grub  
 ```
-**Phase 6: Bannières et Avertissements Légaux**  
+## Phase 6: Bannières et Avertissements Légaux
 La présence d'un avertissement légal (bannière) est indispensable avant toute authentification pour se prémunir juridiquement.  
 **Action :** Appliquez le message suivant aux fichiers /etc/motd, /etc/issue et /etc/issue.net.  
 ```plaintext
@@ -165,14 +165,14 @@ La présence d'un avertissement légal (bannière) est indispensable avant toute
 sudo chown root:root /etc/motd /etc/issue /etc/issue.net  
 sudo chmod 644 /etc/motd /etc/issue /etc/issue.net  
 ```
-**Phase 7 & 8: Suppression des Services Inutiles**  
+## Phase 7 & 8: Suppression des Services Inutiles**  
 Un serveur sécurisé ne doit faire tourner que ce dont il a besoin.  
-**7.1 Suppression de l'interface graphique (GDM/X11)**  
+#### 7.1 Suppression de l'interface graphique (GDM/X11)  
 ```bash
 sudo apt purge -y gdm3; sudo apt purge 'xserver-*' 'libx11-.*'  
  sudo apt autoremove -y  
 ```
-**8.1 Nettoyage des services réseaux obsolètes ou non requis**  
+#### 8.1 Nettoyage des services réseaux obsolètes ou non requis  
 L'exécution des commandes de nettoyage supprimera les services listés ci-dessous, qui représentent un risque s'ils ne sont pas explicitement requis :  
 - **Partage de fichiers et protocoles hérités :**  
 - vsftpd, ftp, tnftp : Serveurs/clients FTP (les identifiants transitent en clair).  
@@ -213,17 +213,17 @@ sudo apt-get update -qq && \
  sudo apt-get autoremove -y -qq && \  
  sudo apt-get clean  
 ```
-**8.2 Sécurisation du serveur Mail (MTA)**  
+#### 8.2 Sécurisation du serveur Mail (MTA)  
 Si votre serveur ne sert pas de relais mail, le MTA (Postfix/Exim) ne doit écouter que sur localhost (127.0.0.1).  
 - **Vérification :**sudo ss -plntu | grep -E ":(25|465|587)"  
 - **Remédiation (Exemple Postfix) :** Dans /etc/postfix/main.cf, définissez inet_interfaces = loopback-only, puis redémarrez Postfix.  
-**8.3 Corriger les permission de crontab**  
+#### 8.3 Corriger les permission de crontab  
 ```bash
 sudo chown root:root /etc/{crontab,cron.hourly,cron.daily,cron.weekly,cron.monthly,cron.d}  
  sudo chmod og-rwx /etc/{crontab,cron.hourly,cron.daily,cron.weekly,cron.monthly,cron.d}  
 ```
-**Phase 9: Sécurisation du Réseau et Pare-feu**  
-**9.1 Désactivation des protocoles réseaux exotiques**  
+## Phase 9: Sécurisation du Réseau et Pare-feu 
+#### 9.1 Désactivation des protocoles réseaux exotiques  
 ```bash
 sudo bash -c 'cat <<EOF > /etc/modprobe.d/hardening-networking.conf  
  install dccp /bin/false  
@@ -237,7 +237,7 @@ sudo bash -c 'cat <<EOF > /etc/modprobe.d/hardening-networking.conf
  EOF'  
  sudo modprobe -r dccp tipc rds sctp 2>/dev/null  
 ```
-**9.2 Durcissement TCP/IP via Sysctl**  
+#### 9.2 Durcissement TCP/IP via Sysctl  
 Prévenir le spoofing IP, ignorer les requêtes ICMP broadcast, et activer les SYN cookies.  
 ```bash
 sudo bash -c 'cat <<EOF >> /etc/sysctl.d/60-network-hardening.conf  
@@ -270,7 +270,7 @@ sudo bash -c 'cat <<EOF >> /etc/sysctl.d/60-network-hardening.conf
  EOF'  
  sudo sysctl --system  
 ```
-**9.4 Configuration du Pare-feu (UFW)**  
+#### 9.4 Configuration du Pare-feu (UFW) 
 Remplacement de Iptables classique par UFW avec une politique de type "Deny All / Allow Exception".  
 ```bash
 sudo apt -y purge iptables iptables-persistent nftables  
@@ -290,8 +290,8 @@ sudo apt -y purge iptables iptables-persistent nftables
  ufw allow proto tcp from any to any port 22'  
  sudo ufw --force enable  
 ```
-**Phase 10: Authentification, Contrôle d'Accès et SSH**  
-**10.1 Sécurisation du démon SSH**  
+## Phase 10: Authentification, Contrôle d'Accès et SSH
+#### 10.1 Sécurisation du démon SSH
 Création d'un profil sécurisé désactivant l'accès root et forçant l'usage de clés.  
 🛑Assurez-vous que vous avez une clés ssh enregistrée sur le serveur avant d’effectuer l’action suivante  
 ```bash
@@ -324,7 +324,7 @@ sudo chmod u-x,og-rwx /etc/ssh/sshd_config && \
  sudo find /etc/ssh/sshd_config.d -type f -exec chmod u-x,og-rwx {} + 2>/dev/null && \  
  sudo find /etc/ssh/sshd_config.d -type f -exec chown root:root {} + 2>/dev/null  
 ```
-**10.2 Durcissement de Sudo**  
+#### 10.2 Durcissement de Sudo  
 Activer les logs Sudo pour l'audit.  
 ```bash
 sudo bash -c 'cat <<EOF > /etc/sudoers.d/00-cis-hardening  
@@ -332,7 +332,7 @@ sudo bash -c 'cat <<EOF > /etc/sudoers.d/00-cis-hardening
  Defaults logfile="/var/log/sudo.log"  
  EOF'  
 ```
-**10.3 Politique des Mots de Passe (PAM)**  
+#### 10.3 Politique des Mots de Passe (PAM)  
 Imposer une politique stricte sur la complexité et l'expiration des mots de passe.  
 ```bash
 sudo apt install -y libpam-runtime libpam-modules libpam-pwquality  
@@ -358,7 +358,7 @@ sudo bash -c 'cat <<EOF > /etc/security/pwquality.conf.d/60-hardening-pw.conf
 - PASS_MIN_DAYS 1  
 - PASS_WARN_AGE 7  
 - ENCRYPT_METHOD SHA512  
-**10.4 Vérification d'intégrité des comptes**  
+#### 10.4 Vérification d'intégrité des comptes
 - Vérifier que seul root possède l'UID 0 :  
 ```bash
 awk -F: '$3 == 0 {print $1}' /etc/passwd  
@@ -369,7 +369,7 @@ awk -F: '$3 == 0 {print $1}' /etc/passwd
 ```bash
 awk -F: '$3 < 1000 && $7 != "/usr/sbin/nologin" && $7 != "/bin/false" {print $1}' /etc/passwd  
 ```
-**Phase 11: Appliquer Redemarrage final**  
+## Phase 11: Appliquer Redemarrage final
 ```bash
 sudo reboot  
 ```
