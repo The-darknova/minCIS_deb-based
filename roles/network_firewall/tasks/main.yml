@@ -1,0 +1,119 @@
+---
+# Role: network_firewall
+- name: Network Modules Hardening
+  when: hardening_network_modules | bool
+  block:
+    - name: Blacklist exotic network protocols
+      ansible.builtin.copy:
+        dest: /etc/modprobe.d/hardening-networking.conf
+        content: |
+          install dccp /bin/false
+          blacklist dccp
+          install tipc /bin/false
+          blacklist tipc
+          install rds /bin/false
+          blacklist rds
+          install sctp /bin/false
+          blacklist sctp
+        mode: '0644'
+        owner: root
+        group: root
+
+    - name: Remove exotic protocols from active kernel
+      community.general.modprobe:
+        name: "{{ item }}"
+        state: absent
+      loop:
+        - dccp
+        - tipc
+        - rds
+        - sctp
+      ignore_errors: true
+
+- name: Network Sysctl Hardening
+  when: hardening_network_sysctl | bool
+  block:
+    - name: Deploy sysctl network hardening configurations
+      ansible.posix.sysctl:
+        name: "{{ item.key }}"
+        value: "{{ item.value }}"
+        sysctl_file: /etc/sysctl.d/60-network-hardening.conf
+        state: present
+        reload: yes
+      loop:
+        - { key: 'net.ipv4.ip_forward', value: '0' }
+        - { key: 'net.ipv6.conf.all.forwarding', value: '0' }
+        - { key: 'net.ipv6.conf.default.forwarding', value: '0' }
+        - { key: 'net.ipv4.conf.all.accept_redirects', value: '0' }
+        - { key: 'net.ipv4.conf.default.accept_redirects', value: '0' }
+        - { key: 'net.ipv4.conf.all.secure_redirects', value: '0' }
+        - { key: 'net.ipv4.conf.default.secure_redirects', value: '0' }
+        - { key: 'net.ipv4.conf.all.send_redirects', value: '0' }
+        - { key: 'net.ipv4.conf.default.send_redirects', value: '0' }
+        - { key: 'net.ipv6.conf.all.accept_redirects', value: '0' }
+        - { key: 'net.ipv6.conf.default.accept_redirects', value: '0' }
+        - { key: 'net.ipv4.conf.all.rp_filter', value: '1' }
+        - { key: 'net.ipv4.conf.default.rp_filter', value: '1' }
+        - { key: 'net.ipv4.conf.all.log_martians', value: '1' }
+        - { key: 'net.ipv4.conf.default.log_martians', value: '1' }
+        - { key: 'net.ipv4.tcp_syncookies', value: '1' }
+        - { key: 'net.ipv4.icmp_echo_ignore_broadcasts', value: '1' }
+        - { key: 'net.ipv4.icmp_ignore_bogus_error_responses', value: '1' }
+        - { key: 'net.ipv6.conf.all.accept_ra', value: '0' }
+        - { key: 'net.ipv6.conf.default.accept_ra', value: '0' }
+        - { key: 'net.ipv4.conf.all.accept_source_route', value: '0' }
+        - { key: 'net.ipv4.conf.default.accept_source_route', value: '0' }
+        - { key: 'net.ipv6.conf.all.accept_source_route', value: '0' }
+        - { key: 'net.ipv6.conf.default.accept_source_route', value: '0' }
+
+- name: UFW Installation and Configuration
+  when: hardening_ufw_enable | bool
+  block:
+    - name: Purge competing firewalls
+      ansible.builtin.apt:
+        name:
+          - iptables
+          - iptables-persistent
+          - nftables
+        state: absent
+        purge: yes
+
+    - name: Install UFW
+      ansible.builtin.apt:
+        name: ufw
+        state: present
+
+    - name: Configure UFW default policies and rules
+      community.general.ufw:
+        state: enabled
+        default: "{{ item.default }}"
+        direction: "{{ item.direction }}"
+      loop:
+        - { direction: incoming, default: deny }
+        - { direction: outgoing, default: allow }
+        - { direction: routed, default: deny }
+      ignore_errors: true
+
+    - name: Allow UFW loopback traffic
+      community.general.ufw:
+        rule: allow
+        interface: lo
+        direction: "{{ item }}"
+      loop:
+        - in
+        - out
+
+    - name: Deny local subnets from external
+      community.general.ufw:
+        rule: deny
+        src: "{{ item }}"
+        direction: in
+      loop:
+        - 127.0.0.0/8
+        - '::1'
+
+    - name: Allow SSH port 22
+      community.general.ufw:
+        rule: allow
+        port: '22'
+        proto: tcp

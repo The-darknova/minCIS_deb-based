@@ -1,0 +1,73 @@
+---
+# Role: filesystem
+- name: Hardening File Systems
+  when: hardening_fs_disable_modules | bool
+  block:
+    - name: Blacklist unused filesystems
+      ansible.builtin.copy:
+        dest: /etc/modprobe.d/hardening-fs.conf
+        content: |
+          install cramfs /bin/false
+          blacklist cramfs
+          install freevxfs /bin/false
+          blacklist freevxfs
+          install jffs2 /bin/false
+          blacklist jffs2
+          install hfs /bin/false
+          blacklist hfs
+          install hfsplus /bin/false
+          blacklist hfsplus
+          install squashfs /bin/false
+          blacklist squashfs
+          install udf /bin/false
+          blacklist udf
+          install usb-storage /bin/false
+          blacklist usb-storage
+          install firewire-core /bin/false
+          blacklist firewire-core
+          install afs /bin/false
+          blacklist afs
+        mode: '0644'
+        owner: root
+        group: root
+
+    - name: Remove unused filesystems from active kernel
+      community.general.modprobe:
+        name: "{{ item }}"
+        state: absent
+      loop:
+        - cramfs
+        - freevxfs
+        - jffs2
+        - hfs
+        - hfsplus
+        - squashfs
+        - udf
+        - usb-storage
+        - firewire-core
+        - afs
+      ignore_errors: true
+
+- name: Secure important partitions
+  when: hardening_fs_secure_mounts | bool
+  block:
+    - name: Gather facts about mount points
+      ansible.builtin.setup:
+        filter: ansible_mounts
+
+    - name: Ensure strict mount options on temp and log partitions
+      ansible.posix.mount:
+        path: "{{ item.path }}"
+        src: "{{ hostvars[inventory_hostname]['ansible_mounts'] | selectattr('mount', 'equalto', item.path) | map(attribute='device') | first | default(omit) }}"
+        fstype: "{{ hostvars[inventory_hostname]['ansible_mounts'] | selectattr('mount', 'equalto', item.path) | map(attribute='fstype') | first | default(omit) }}"
+        opts: "{{ item.opts }}"
+        state: mounted
+      loop:
+        - { path: '/tmp', opts: 'nodev,nosuid,noexec' }
+        - { path: '/var/tmp', opts: 'nodev,nosuid,noexec' }
+        - { path: '/var', opts: 'nodev,nosuid,noexec' }
+        - { path: '/dev/shm', opts: 'nodev,nosuid,noexec' }
+        - { path: '/var/log', opts: 'nodev,nosuid,noexec' }
+        - { path: '/var/log/audit', opts: 'nodev,nosuid,noexec' }
+        - { path: '/home', opts: 'nodev,nosuid' }
+      when: item.path in hostvars[inventory_hostname]['ansible_mounts'] | map(attribute='mount') | list

@@ -1,0 +1,50 @@
+---
+# Role: kernel_boot
+- name: Secure Grub Configuration
+  when: hardening_grub_secure | bool
+  block:
+    - name: Restrict permissions on /boot/grub/grub.cfg
+      ansible.builtin.file:
+        path: /boot/grub/grub.cfg
+        owner: root
+        group: root
+        mode: 'u-x,go-rwx'
+      ignore_errors: true # In case grub is not installed or path is different
+
+- name: Kernel Sysctl Restrictions
+  when: hardening_kernel_sysctl | bool
+  block:
+    - name: Deploy sysctl process hardening configurations
+      ansible.posix.sysctl:
+        name: "{{ item.key }}"
+        value: "{{ item.value }}"
+        sysctl_file: /etc/sysctl.d/60-process-hardening.conf
+        state: present
+        reload: yes
+      loop:
+        - { key: 'kernel.randomize_va_space', value: '2' }
+        - { key: 'kernel.yama.ptrace_scope', value: '1' }
+        - { key: 'fs.suid_dumpable', value: '0' }
+        - { key: 'kernel.dmesg_restrict', value: '1' }
+        - { key: 'kernel.kptr_restrict', value: '2' }
+        - { key: 'fs.protected_hardlinks', value: '1' }
+        - { key: 'fs.protected_symlinks', value: '1' }
+
+- name: Disable Core Dumps
+  when: hardening_disable_coredumps | bool
+  block:
+    - name: Write core dump limits
+      ansible.builtin.copy:
+        dest: /etc/security/limits.d/60-disable-core-dumps.conf
+        content: "* hard core 0\n"
+        mode: '0644'
+        owner: root
+        group: root
+
+    - name: Purge prelink and apport
+      ansible.builtin.apt:
+        name:
+          - prelink
+          - apport
+        state: absent
+        purge: yes

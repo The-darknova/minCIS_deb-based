@@ -1,0 +1,113 @@
+---
+# Role: package_mgmt
+- name: APT Security Configuration
+  when: hardening_apt_secure | bool
+  block:
+    - name: Disable weak APT dependencies
+      ansible.builtin.copy:
+        dest: /etc/apt/apt.conf.d/60-no-weak-dependencies
+        content: |
+          APT::Install-Recommends "0";
+          APT::Install-Suggests "0";
+        mode: '0644'
+        owner: root
+        group: root
+
+    - name: Set secure permissions on /etc/apt directories
+      ansible.builtin.file:
+        path: /etc/apt
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+        recurse: yes
+      
+    - name: Run APT update and full-upgrade
+      ansible.builtin.apt:
+        update_cache: yes
+        upgrade: full
+
+- name: Purge GUI components
+  when: hardening_purge_gui | bool
+  block:
+    - name: Purge GDM3 and X11
+      ansible.builtin.apt:
+        name:
+          - gdm3
+          - xserver-*
+          - libx11-.*
+        state: absent
+        purge: yes
+        autoremove: yes
+
+- name: Purge legacy network services
+  when: hardening_purge_services | bool
+  block:
+    - name: Purge legacy services
+      ansible.builtin.apt:
+        name:
+          - vsftpd
+          - ftp
+          - tnftp
+          - tftpd-hpa
+          - nfs-kernel-server
+          - samba
+          - smbd
+          - autofs
+          - avahi-daemon
+          - cups
+          - bluez
+          - slapd
+          - ldap-utils
+          - ypserv
+          - bind9
+          - bind9utils
+          - bind9-doc
+          - dnsmasq
+          - isc-dhcp-server
+          - rpcbind
+          - dovecot-imapd
+          - dovecot-pop3d
+          - rsh-client
+          - talk
+          - telnet
+          - inetutils-telnet
+          - apache2
+          - nginx
+          - squid
+          - snmp
+          - rsync
+          - xinetd
+        state: absent
+        purge: yes
+        autoremove: yes
+
+    - name: Check if Postfix is installed
+      ansible.builtin.stat:
+        path: /etc/postfix/main.cf
+      register: postfix_stat
+
+    - name: Secure MTA (Postfix) to listen on loopback-only
+      ansible.builtin.lineinfile:
+        path: /etc/postfix/main.cf
+        regexp: '^inet_interfaces'
+        line: 'inet_interfaces = loopback-only'
+        state: present
+      when: postfix_stat.stat.exists
+
+- name: Secure cron permissions
+  when: hardening_cron_secure | bool
+  block:
+    - name: Set permissions and ownership for cron files and directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        owner: root
+        group: root
+        mode: 'g-rwx,o-rwx'
+      loop:
+        - /etc/crontab
+        - /etc/cron.hourly
+        - /etc/cron.daily
+        - /etc/cron.weekly
+        - /etc/cron.monthly
+        - /etc/cron.d

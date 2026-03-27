@@ -1,0 +1,119 @@
+---
+# Role: auth_ssh
+- name: Legal Banner Deployment
+  when: hardening_legal_banner | bool
+  block:
+    - name: Deploy the legal banner text to motd and issue files
+      ansible.builtin.copy:
+        dest: "{{ item }}"
+        content: |
+          *******************************************************************************
+          AVERTISSEMENT: Accès autorisé uniquement.
+          Ce système est surveillé à des fins de sécurité. Tout accès ou utilisation
+          non autorisé(e) de ce système est interdit(e) et peut entraîner des sanctions
+          pénales ou civiles.
+          
+          https://changeme.com
+          *******************************************************************************
+        mode: '0644'
+        owner: root
+        group: root
+      loop:
+        - /etc/motd
+        - /etc/issue
+        - /etc/issue.net
+
+- name: SSH Hardening
+  when: hardening_ssh_secure | bool
+  block:
+    - name: Deploy custom sshd_config settings
+      ansible.builtin.copy:
+        dest: /etc/ssh/sshd_config.d/60-ssh-hardening.conf
+        content: |
+          Banner /etc/issue.net
+          PermitRootLogin no
+          PermitEmptyPasswords no
+          PasswordAuthentication no
+          MaxAuthTries 4
+          ClientAliveInterval 30
+          ClientAliveCountMax 3
+          LoginGraceTime 60
+          X11Forwarding no
+          AllowTcpForwarding no
+          IgnoreRhosts yes
+          HostbasedAuthentication no
+          UsePAM yes
+          PermitUserEnvironment no
+          DisableForwarding yes
+          MaxStartups 10:30:60
+          LogLevel VERBOSE
+        mode: '0600'
+        owner: root
+        group: root
+      notify: Restart SSH
+
+    - name: Fix permissions on main sshd config file
+      ansible.builtin.file:
+        path: /etc/ssh/sshd_config
+        owner: root
+        group: root
+        mode: 'u-x,og-rwx'
+
+- name: Sudo Hardening
+  when: hardening_sudo_secure | bool
+  block:
+    - name: Configure sudo logging and pty
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/00-cis-hardening
+        content: |
+          Defaults use_pty
+          Defaults logfile="/var/log/sudo.log"
+        mode: '0440'
+        owner: root
+        group: root
+        validate: 'visudo -cf %s'
+
+- name: PAM and Password Policies Hardening
+  when: hardening_pam_secure | bool
+  block:
+    - name: Install PAM security modules
+      ansible.builtin.apt:
+        name:
+          - libpam-pwquality
+          - libpam-modules
+        state: present
+
+    - name: Configure password complexity rules
+      ansible.builtin.copy:
+        dest: /etc/security/pwquality.conf.d/60-hardening-pw.conf
+        content: |
+          difok = 2
+          minlen = 14
+          minclass = 3
+          dcredit = -1
+          ucredit = -1
+          ocredit = -1
+          lcredit = -1
+          maxrepeat = 3
+          maxsequence = 3
+        mode: '0644'
+        owner: root
+        group: root
+
+    - name: Enforce password expiration in login.defs
+      ansible.builtin.lineinfile:
+        path: /etc/login.defs
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+      loop:
+        - { regexp: '^PASS_MAX_DAYS', line: 'PASS_MAX_DAYS 90' }
+        - { regexp: '^PASS_MIN_DAYS', line: 'PASS_MIN_DAYS 1' }
+
+    - name: Remove nullok from PAM configurations
+      ansible.builtin.replace:
+        path: "{{ item }}"
+        regexp: '\s+nullok(_secure)?'
+        replace: ''
+      loop:
+        - /etc/pam.d/common-auth
+        - /etc/pam.d/common-password

@@ -1,0 +1,54 @@
+---
+# Toggles blacklisting of unused filesystems.
+hardening_fs_disable_modules: true
+
+# Toggles strict mount options (nodev, nosuid, noexec) on temp and log partitions.
+hardening_fs_secure_mounts: true
+
+# Toggles disabling weak dependencies and securing /etc/apt permissions.
+hardening_apt_secure: true
+
+# Toggles installation and enforcement of AppArmor and namespace restrictions.
+hardening_apparmor_enable: true
+
+# Toggles file permission restrictions on /boot/grub/grub.cfg.
+hardening_grub_secure: true
+
+# Toggles ASLR, dmesg restrictions, and symlink protections.
+hardening_kernel_sysctl: true
+
+# Toggles core dump limits and removal of prelink/apport.
+hardening_disable_coredumps: true
+
+# Toggles installation and enabling of auditd.
+hardening_auditd_enable: true
+
+# Toggles deployment of the legal warning to motd and issue files.
+hardening_legal_banner: true
+
+# Toggles removal of GDM3 and X11 components.
+hardening_purge_gui: true
+
+# Toggles the purge of legacy network services.
+hardening_purge_services: true
+
+# Toggles securing /etc/cron.* directory permissions.
+hardening_cron_secure: true
+
+# Toggles blacklisting of exotic network protocols.
+hardening_network_modules: true
+
+# Toggles TCP/IP protections (IP forwarding, SYN cookies).
+hardening_network_sysctl: true
+
+# Toggles UFW installation and default drop policies.
+hardening_ufw_enable: true
+
+# Toggles custom sshd_config settings.
+hardening_ssh_secure: true
+
+# Toggles sudo logging.
+hardening_sudo_secure: true
+
+# Toggles password complexity rules and expiration policies.
+hardening_pam_secure: true

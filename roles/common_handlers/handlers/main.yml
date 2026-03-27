@@ -1,0 +1,12 @@
+---
+- name: Restart SSH
+  ansible.builtin.systemd:
+    name: ssh
+    state: restarted
+
+- name: Reboot System
+  ansible.builtin.reboot:
+    msg: "Rebooting to apply kernel hardening metrics."
+
+- name: Update GRUB
+  ansible.builtin.command: update-grub

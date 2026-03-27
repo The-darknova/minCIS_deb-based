@@ -1,0 +1,55 @@
+---
+# Role: access_control
+- name: AppArmor Installation and Enforcement
+  when: hardening_apparmor_enable | bool
+  block:
+    - name: Install AppArmor utilities
+      ansible.builtin.apt:
+        name:
+          - apparmor
+          - apparmor-utils
+        state: present
+
+    - name: Enable AppArmor in GRUB
+      ansible.builtin.replace:
+        path: /etc/default/grub
+        regexp: '^GRUB_CMDLINE_LINUX="(?!.*apparmor=1)(.*)"$'
+        replace: 'GRUB_CMDLINE_LINUX="\1 apparmor=1 security=apparmor"'
+      notify: Update GRUB
+
+    - name: Enforce all AppArmor profiles
+      ansible.builtin.command: aa-enforce /etc/apparmor.d/*
+      register: aa_enforce_output
+      changed_when: "'Enforcing' in aa_enforce_output.stdout or 'changed' in aa_enforce_output.stdout"
+      ignore_errors: true
+
+    - name: Restrict unprivileged AppArmor namespace
+      ansible.posix.sysctl:
+        name: kernel.apparmor_restrict_unprivileged_unconfined
+        value: '1'
+        sysctl_file: /etc/sysctl.d/60-apparmor-namespace.conf
+        state: present
+        reload: yes
+
+- name: Auditd Installation and Enforcement
+  when: hardening_auditd_enable | bool
+  block:
+    - name: Install auditd and plugins
+      ansible.builtin.apt:
+        name:
+          - auditd
+          - audispd-plugins
+        state: present
+
+    - name: Enable and start auditd
+      ansible.builtin.systemd:
+        name: auditd
+        enabled: yes
+        state: started
+
+    - name: Enable Auditd in GRUB
+      ansible.builtin.replace:
+        path: /etc/default/grub
+        regexp: '^GRUB_CMDLINE_LINUX="(?!.*audit=1)(.*)"$'
+        replace: 'GRUB_CMDLINE_LINUX="\1 audit=1"'
+      notify: Update GRUB

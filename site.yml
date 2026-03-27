@@ -1,0 +1,14 @@
+---
+- name: Debian-based linux System Hardening
+  hosts: debian_servers
+  become: true
+  vars_files:
+    - group_vars/all.yml
+  roles:
+    - common_handlers
+    - filesystem
+    - package_mgmt
+    - access_control
+    - kernel_boot
+    - network_firewall
+    - auth_ssh
