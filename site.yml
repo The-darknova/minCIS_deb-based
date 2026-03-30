@@ -1,9 +1,10 @@
 ---
 - name: Debian-based linux System Hardening
-  hosts: debian_servers
+  hosts: test_nodes
   become: true
   vars_files:
     - group_vars/all.yml
+    - group_vars/all_secrets.yml
   roles:
     - common_handlers
     - filesystem

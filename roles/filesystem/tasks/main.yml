@@ -41,7 +41,7 @@
         - jffs2
         - hfs
         - hfsplus
-        - squashfs
+        - squashfs-tools
         - udf
         - usb-storage
         - firewire-core

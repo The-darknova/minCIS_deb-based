@@ -81,7 +81,16 @@
         name:
           - libpam-pwquality
           - libpam-modules
+          - cracklib-runtime
         state: present
+
+    - name: Ensure pwquality.conf.d directory exists
+      ansible.builtin.file:
+        path: /etc/security/pwquality.conf.d
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
 
     - name: Configure password complexity rules
       ansible.builtin.copy:
@@ -96,6 +105,7 @@
           lcredit = -1
           maxrepeat = 3
           maxsequence = 3
+          enforce_for_root = yes
         mode: '0644'
         owner: root
         group: root

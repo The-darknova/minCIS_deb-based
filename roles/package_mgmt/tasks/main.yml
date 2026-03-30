@@ -35,7 +35,7 @@
         name:
           - gdm3
           - xserver-*
-          - libx11-.*
+          - libx11-*
         state: absent
         purge: yes
         autoremove: yes
