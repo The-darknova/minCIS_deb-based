@@ -28,7 +28,7 @@
   block:
     - name: Deploy custom sshd_config settings
       ansible.builtin.copy:
-        dest: /etc/ssh/sshd_config.d/60-ssh-hardening.conf
+        dest: /etc/ssh/sshd_config.d/06-ssh-hardening.conf
         content: |
           Banner /etc/issue.net
           PermitRootLogin no
