@@ -1,4 +1,4 @@
-# Debian-based System Hardening (minCIS_deb-based)
+# Debian-based System Configuration Hardening (minCIS_deb-based)
 
 This project provides a production-grade, highly modular, and idempotent Ansible playbook designed to automatically harden Debian-based Linux systems. It drastically reduces the attack surface, implements mandatory access controls, hardens the kernel and filesystem, and enforces strict authentication policies based on industry-standard security guidelines.
 
