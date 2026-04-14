@@ -56,3 +56,6 @@ hardening_sudo_secure: true
 
 # Toggles password complexity rules and expiration policies.
 hardening_pam_secure: true
+
+# Toggles password expiration policies.
+hardening_password_expiration: false
