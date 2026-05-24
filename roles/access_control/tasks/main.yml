@@ -53,3 +53,22 @@
         regexp: '^GRUB_CMDLINE_LINUX="(?!.*audit=1)(.*)"$'
         replace: 'GRUB_CMDLINE_LINUX="\1 audit=1"'
       notify: Update GRUB
+
+    - name: Deploy CIS auditd rules
+      ansible.builtin.copy:
+        dest: /etc/audit/rules.d/cis.rules
+        content: |
+          -w /etc/passwd -p wa -k identity
+          -w /etc/group -p wa -k identity
+          -w /etc/shadow -p wa -k identity
+          -w /etc/sudoers -p wa -k scope
+          -w /var/log/tallylog -p wa -k logins
+          -w /var/run/faillock -p wa -k logins
+          -w /var/log/lastlog -p wa -k logins
+          -w /etc/localtime -p wa -k time-change
+          -w /etc/apparmor/ -p wa -k MAC-policy
+          -w /etc/apparmor.d/ -p wa -k MAC-policy
+        mode: '0640'
+        owner: root
+        group: root
+      notify: Restart Auditd

@@ -10,3 +10,14 @@
 
 - name: Update GRUB
   ansible.builtin.command: update-grub
+
+- name: Restart Auditd
+  ansible.builtin.service:
+    name: auditd
+    state: restarted
+    use: service
+
+- name: Restart Chrony
+  ansible.builtin.systemd:
+    name: chrony
+    state: restarted

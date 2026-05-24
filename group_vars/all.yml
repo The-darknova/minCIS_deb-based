@@ -65,3 +65,12 @@ hardening_pam_faillock: true
 
 # Toggles profile security (TMOUT and umask).
 hardening_profile_secure: true
+
+# Toggles auditd rules deployment.
+hardening_auditd_rules: true
+
+# Toggles time synchronization (Chrony).
+hardening_time_sync: true
+
+# Toggles strict cron access controls.
+hardening_cron_allow: true

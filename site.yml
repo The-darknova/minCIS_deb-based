@@ -9,6 +9,7 @@
     - common_handlers
     - filesystem
     - package_mgmt
+    - time_sync
     - access_control
     - kernel_boot
     - network_firewall

@@ -111,3 +111,25 @@
         - /etc/cron.weekly
         - /etc/cron.monthly
         - /etc/cron.d
+
+- name: Restrict Cron and At Access
+  when: hardening_cron_allow | bool
+  block:
+    - name: Remove cron.deny and at.deny
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/cron.deny
+        - /etc/at.deny
+
+    - name: Create cron.allow and at.allow
+      ansible.builtin.copy:
+        dest: "{{ item }}"
+        content: "root\n"
+        owner: root
+        group: root
+        mode: '0600'
+      loop:
+        - /etc/cron.allow
+        - /etc/at.allow
