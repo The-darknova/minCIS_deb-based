@@ -59,3 +59,9 @@ hardening_pam_secure: true
 
 # Toggles password expiration policies.
 hardening_password_expiration: false
+
+# Toggles pam_faillock account lockout policies.
+hardening_pam_faillock: true
+
+# Toggles profile security (TMOUT and umask).
+hardening_profile_secure: true

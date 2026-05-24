@@ -65,7 +65,7 @@
       loop:
         - { path: '/tmp', opts: 'nodev,nosuid,noexec' }
         - { path: '/var/tmp', opts: 'nodev,nosuid,noexec' }
-        - { path: '/var', opts: 'nodev,nosuid,noexec' }
+        - { path: '/var', opts: 'nodev,nosuid' }
         - { path: '/dev/shm', opts: 'nodev,nosuid,noexec' }
         - { path: '/var/log', opts: 'nodev,nosuid,noexec' }
         - { path: '/var/log/audit', opts: 'nodev,nosuid,noexec' }
