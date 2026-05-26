@@ -53,13 +53,13 @@
   block:
     - name: Gather facts about mount points
       ansible.builtin.setup:
-        filter: ansible_mounts
+        filter: mounts
 
     - name: Ensure strict mount options on temp and log partitions
       ansible.posix.mount:
         path: "{{ item.path }}"
-        src: "{{ hostvars[inventory_hostname]['ansible_mounts'] | selectattr('mount', 'equalto', item.path) | map(attribute='device') | first | default(omit) }}"
-        fstype: "{{ hostvars[inventory_hostname]['ansible_mounts'] | selectattr('mount', 'equalto', item.path) | map(attribute='fstype') | first | default(omit) }}"
+        src: "{{ ansible_facts['mounts'] | selectattr('mount', 'equalto', item.path) | map(attribute='device') | first | default(omit) }}"
+        fstype: "{{ ansible_facts['mounts'] | selectattr('mount', 'equalto', item.path) | map(attribute='fstype') | first | default(omit) }}"
         opts: "{{ item.opts }}"
         state: mounted
       loop:
@@ -70,4 +70,4 @@
         - { path: '/var/log', opts: 'nodev,nosuid,noexec' }
         - { path: '/var/log/audit', opts: 'nodev,nosuid,noexec' }
         - { path: '/home', opts: 'nodev,nosuid' }
-      when: item.path in hostvars[inventory_hostname]['ansible_mounts'] | map(attribute='mount') | list
+      when: item.path in ansible_facts['mounts'] | map(attribute='mount') | list

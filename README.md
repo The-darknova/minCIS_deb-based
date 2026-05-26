@@ -88,7 +88,7 @@ hardening_apparmor_enable: true
 hardening_ufw_enable: true
 hardening_ssh_secure: true
 hardening_pam_secure: true
-hardening_time_sync: true
+hardening_time_sync: false
 ```
 
 If a configuration breaks an application, you can simply change its corresponding toggle to `false` and re-run the playbook to bypass that specific restriction without disabling the entire role.
