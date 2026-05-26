@@ -86,6 +86,25 @@ sudo apt update && sudo apt full-upgrade -y
  # Vérifier si un redémarrage complet est nécessaire  
  [ -f /var/run/reboot-required ] && cat /var/run/reboot-required && sudo reboot  
 ```
+
+#### 2.5 Synchronisation de l'Heure (Chrony)
+Une synchronisation précise de l'heure est essentielle pour la corrélation des journaux système et d'audit.
+**Action :** Installer et configurer Chrony.
+```bash
+sudo apt update && sudo apt install -y chrony
+sudo bash -c 'cat <<EOF > /etc/chrony/chrony.conf
+pool 2.debian.pool.ntp.org iburst
+keyfile /etc/chrony/chrony.keys
+driftfile /var/lib/chrony/chrony.drift
+log tracking measurements statistics
+logdir /var/log/chrony
+maxupdateskew 100.0
+rtcsync
+makestep 1 3
+EOF'
+sudo systemctl enable --now chrony
+```
+
 ### Phase 3: Contrôle d'Accès Obligatoire (AppArmor)  
 AppArmor confine les programmes à un ensemble limité de ressources, atténuant ainsi les attaques de type 0-day.  
 #### 3.1 Installation et activation dans le GRUB  
@@ -147,6 +166,16 @@ sudo apt update && sudo apt install auditd audispd-plugins
  # Mettre à jour GRUB  
  sudo update-grub  
 ```
+
+#### 5.4 Déploiement des règles auditd
+Déployer des règles spécifiques (CIS) pour auditd afin d'assurer une surveillance complète.
+```bash
+# Copiez vos règles spécifiques dans /etc/audit/rules.d/60-cis-rules.rules
+# Puis rechargez auditd et appliquez les règles
+sudo augenrules --load
+sudo systemctl restart auditd
+```
+
 ## Phase 6: Bannières et Avertissements Légaux
 La présence d'un avertissement légal (bannière) est indispensable avant toute authentification pour se prémunir juridiquement.  
 **Action :** Appliquez le message suivant aux fichiers /etc/motd, /etc/issue et /etc/issue.net.  
@@ -222,6 +251,16 @@ Si votre serveur ne sert pas de relais mail, le MTA (Postfix/Exim) ne doit écou
 sudo chown root:root /etc/{crontab,cron.hourly,cron.daily,cron.weekly,cron.monthly,cron.d}  
  sudo chmod og-rwx /etc/{crontab,cron.hourly,cron.daily,cron.weekly,cron.monthly,cron.d}  
 ```
+
+#### 8.4 Restreindre l'accès à Cron et At
+Supprimer les fichiers `deny` et créer les fichiers `allow` restreints à l'utilisateur root.
+```bash
+sudo rm -f /etc/cron.deny /etc/at.deny
+sudo bash -c 'echo "root" > /etc/cron.allow'
+sudo bash -c 'echo "root" > /etc/at.allow'
+sudo chmod 600 /etc/cron.allow /etc/at.allow
+```
+
 ## Phase 9: Sécurisation du Réseau et Pare-feu 
 #### 9.1 Désactivation des protocoles réseaux exotiques  
 ```bash
@@ -341,7 +380,7 @@ sudo apt install -y libpam-runtime libpam-modules libpam-pwquality
 ```bash
 sudo bash -c 'cat <<EOF > /etc/security/pwquality.conf.d/60-hardening-pw.conf  
  difok = 2  
- minlen = 14  
+#  minlen = 14  
  minclass = 3  
  dcredit = -1  
  ucredit = -1  
@@ -369,6 +408,30 @@ awk -F: '$3 == 0 {print $1}' /etc/passwd
 ```bash
 awk -F: '$3 < 1000 && $7 != "/usr/sbin/nologin" && $7 != "/bin/false" {print $1}' /etc/passwd  
 ```
+
+#### 10.5 Politique de verrouillage de compte (pam_faillock)
+Bloquer les comptes après plusieurs tentatives de connexion échouées.
+```bash
+sudo apt install -y libpam-faillock
+sudo bash -c 'cat <<EOF > /etc/security/faillock.conf
+deny = 5
+unlock_time = 900
+even_deny_root
+EOF'
+sudo pam-auth-update --enable faillock
+```
+
+#### 10.6 Sécurité des profils utilisateurs (TMOUT et umask)
+Définir une expiration d'inactivité (TMOUT) et un masque de création de fichiers restrictif.
+```bash
+sudo bash -c 'cat <<EOF > /etc/profile.d/99-hardening.sh
+readonly TMOUT=900
+export TMOUT
+umask 027
+EOF'
+sudo chmod 644 /etc/profile.d/99-hardening.sh
+```
+
 ## Phase 11: Appliquer Redemarrage final
 ```bash
 sudo reboot  

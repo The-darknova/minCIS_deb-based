@@ -31,12 +31,13 @@ minCIS_deb-based/
     ├── filesystem/        # Secure mount options and FS blacklisting
     ├── kernel_boot/       # Kernel sysctl, coredumps, GRUB permissions
     ├── network_firewall/  # Network sysctl, UFW, exotic protocols removal
-    └── package_mgmt/      # APT security and legacy service purging
+    ├── package_mgmt/      # APT security and legacy service purging
+    └── time_sync/         # Time synchronization (Chrony)
 ```
 
 ### Execution Flow (`site.yml`)
 
-The main playbook targets the `debian_servers` group and executes the following roles sequentially:
+The main playbook targets the `test_nodes` group and executes the following roles sequentially:
 
 1. **`common_handlers`**: Consolidates global handlers (e.g., `Restart SSH`, `Reboot System`, `Update GRUB`) invoked by multiple roles.
 
@@ -49,23 +50,26 @@ The main playbook targets the `debian_servers` group and executes the following 
    - Secures APT repository file permissions.
    - Purges legacy network services, graphical interfaces (GDM3/X11), and unnecessary daemons.
 
-4. **`access_control`**:
+4. **`time_sync`**:
+   - Installs and configures **Chrony** for accurate network time synchronization.
+
+5. **`access_control`**:
    - Installs and enforces **AppArmor** profiles.
    - Restricts unprivileged AppArmor namespaces.
    - Installs **Auditd** for extensive system event auditing.
    - Automatically injects AppArmor and Auditd kernel parameters into the GRUB bootloader.
 
-5. **`kernel_boot`**:
+6. **`kernel_boot`**:
    - Secures `/boot/grub/grub.cfg` permissions to prevent local tampering.
    - Applies strict Kernel Sysctl hardening (enables ASLR, restricts dmesg, protects symlinks/hardlinks).
    - Disables core dumps and removes debugging tools like prelink/apport.
 
-6. **`network_firewall`**:
+7. **`network_firewall`**:
    - Blacklists exotic networking protocols (dccp, tipc, rds, sctp).
    - Secures the TCP/IP stack via Sysctl (disables IP forwarding, enables SYN cookies, logs martians).
    - Installs and configures **UFW** (Uncomplicated Firewall) with a default allow-out/deny-in/deny-routed policy.
 
-7. **`auth_ssh`**:
+8. **`auth_ssh`**:
    - Deploys legal warning banners (`/etc/issue`, `/etc/motd`).
    - Heavily restricts SSH daemon access (`PermitRootLogin no`, `PasswordAuthentication no`, `X11Forwarding no`).
    - Implements strict **PAM** password complexity and expiration rules.
@@ -84,6 +88,7 @@ hardening_apparmor_enable: true
 hardening_ufw_enable: true
 hardening_ssh_secure: true
 hardening_pam_secure: true
+hardening_time_sync: true
 ```
 
 If a configuration breaks an application, you can simply change its corresponding toggle to `false` and re-run the playbook to bypass that specific restriction without disabling the entire role.
