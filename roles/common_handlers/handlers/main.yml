@@ -15,7 +15,7 @@
   ansible.builtin.service:
     name: auditd
     state: restarted
-    use: service
+  ignore_errors: true
 
 - name: Restart Chrony
   ansible.builtin.systemd:

@@ -136,7 +136,7 @@
   block:
     - name: Install PAM faillock module
       ansible.builtin.apt:
-        name: libpam-faillock
+        name: libpam-modules
         state: present
 
     - name: Configure faillock settings

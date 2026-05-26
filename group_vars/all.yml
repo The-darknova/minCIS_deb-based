@@ -70,7 +70,7 @@ hardening_profile_secure: true
 hardening_auditd_rules: true
 
 # Toggles time synchronization (Chrony).
-hardening_time_sync: true
+hardening_time_sync: false
 
 # Toggles strict cron access controls.
 hardening_cron_allow: true

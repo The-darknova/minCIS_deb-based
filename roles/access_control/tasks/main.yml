@@ -46,6 +46,7 @@
         name: auditd
         enabled: yes
         state: started
+      ignore_errors: true
 
     - name: Enable Auditd in GRUB
       ansible.builtin.replace:
@@ -56,8 +57,8 @@
 
     - name: Deploy CIS auditd rules
       ansible.builtin.copy:
-        src: 60-cis-rules.rules
-        dest: /etc/audit/rules.d/60-cis-rules.rules
+        src: 60-cis-auditd.rules
+        dest: /etc/audit/rules.d/60-cis-auditd.rules
         mode: '0640'
         owner: root
         group: root
