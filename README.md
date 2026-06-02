@@ -19,7 +19,7 @@ The playbook follows a modular Role-Based architecture, making it easy to turn s
 
 ```text
 minCIS_deb-based/
-├── Debian_based_v2.md     # Comprehensive manual hardening guide
+├── Debian_based_v3.md     # Comprehensive manual hardening guide
 ├── inventory.ini          # Server inventory targeting your environments
 ├── site.yml               # Master playbook defining role execution order
 ├── group_vars/
@@ -54,9 +54,9 @@ The main playbook targets the `test_nodes` group and executes the following role
    - Installs and configures **Chrony** for accurate network time synchronization.
 
 5. **`access_control`**:
-   - Installs and enforces **AppArmor** profiles.
-   - Restricts unprivileged AppArmor namespaces.
-   - Installs **Auditd** for extensive system event auditing.
+   - Installs and enforces **AppArmor** profiles and restricts unprivileged namespaces.
+   - Installs **Auditd** with strict CIS rules, backlog limits, and low disk space warnings.
+   - Configures **Journald** for persistent local storage, compression, and log isolation.
    - Automatically injects AppArmor and Auditd kernel parameters into the GRUB bootloader.
 
 6. **`kernel_boot`**:
@@ -72,7 +72,8 @@ The main playbook targets the `test_nodes` group and executes the following role
 8. **`auth_ssh`**:
    - Deploys legal warning banners (`/etc/issue`, `/etc/motd`).
    - Heavily restricts SSH daemon access (`PermitRootLogin no`, `PasswordAuthentication no`, `X11Forwarding no`).
-   - Implements strict **PAM** password complexity and expiration rules.
+   - Implements strict **PAM** password complexity (`dictcheck`), history (`pwhistory`), and explicit lockout profiles (`faillock`).
+   - Enforces strict file permissions on critical system authentication files (`shadow`, `gshadow`, `shells`, `opasswd`).
    - Enables detailed Sudo auditing and secures `cron` directories.
 
 ---
@@ -89,6 +90,8 @@ hardening_ufw_enable: true
 hardening_ssh_secure: true
 hardening_pam_secure: true
 hardening_time_sync: false
+hardening_auditd_space_warn: false
+hardening_pam_pwhistory: false
 ```
 
 If a configuration breaks an application, you can simply change its corresponding toggle to `false` and re-run the playbook to bypass that specific restriction without disabling the entire role.
@@ -98,7 +101,7 @@ If a configuration breaks an application, you can simply change its correspondin
 ## 🚀 Setup and Execution Instructions
 
 > [!NOTE]
-> For more in-depth information, architectural concepts, and manual step-by-step equivalents, please refer to the comprehensive [Debian_based_v2.md](Debian_based_v2.md) guide included in this repository.
+> For more in-depth information, architectural concepts, and manual step-by-step equivalents, please refer to the comprehensive [Debian_based_v3.md](Debian_based_v3.md) guide included in this repository.
 
 ### 1. Environment and Policy Customization
 

@@ -210,12 +210,12 @@ echo "* hard core 0" | sudo tee -a /etc/security/limits.d/60-disable-core-dumps.
 
 ```bash
 sudo apt update && sudo apt install auditd audispd-plugins
- sudo systemctl enable auditd || true
- # Pour activer auditd, éditez /etc/default/grub et modifiez GRUB_CMDLINE_LINUX :
- # Exemple: GRUB_CMDLINE_LINUX="apparmor=1 security=apparmor audit=1"
+sudo systemctl enable auditd || true
+# Pour activer auditd et définir les limites, éditez /etc/default/grub et modifiez GRUB_CMDLINE_LINUX :
+# Exemple: GRUB_CMDLINE_LINUX="apparmor=1 security=apparmor audit=1 audit_backlog_limit=8192"
 
- # Mettre à jour GRUB
- sudo update-grub
+# Mettre à jour GRUB
+sudo update-grub
 ```
 
 ### **5.4 Déploiement des règles auditd**
@@ -254,6 +254,7 @@ Déployer des règles spécifiques (CIS) pour auditd afin d'assurer une surveill
 -w /etc/issue.net -p wa -k system-locale
 -w /etc/hosts -p wa -k system-locale
 -w /etc/network -p wa -k system-locale
+-w /etc/networks -p wa -k system-locale
 
 ## =========================================================
 ## MAC Policy (AppArmor)
@@ -262,17 +263,24 @@ Déployer des règles spécifiques (CIS) pour auditd afin d'assurer une surveill
 -w /etc/apparmor.d/ -p wa -k MAC-policy
 
 ## =========================================================
+## User Emulation
+## =========================================================
+-a always,exit -F arch=b64 -S execve -C uid!=euid -F euid=0 -k user_emulation
+-a always,exit -F arch=b32 -S execve -C uid!=euid -F euid=0 -k user_emulation
+
+## =========================================================
 ## Logins and Logouts
 ## =========================================================
 -w /var/log/lastlog -p wa -k logins
--w /var/run/faillog -p wa -k logins
+-w /var/log/faillog -p wa -k logins
+-w /var/log/tallylog -p wa -k logins
 
 ## =========================================================
 ## Session Initiation Information
 ## =========================================================
 -w /var/run/utmp -p wa -k session
--w /var/log/wtmp -p wa -k logins
--w /var/log/btmp -p wa -k logins
+-w /var/log/wtmp -p wa -k session
+-w /var/log/btmp -p wa -k session
 
 ## =========================================================
 ## Identity and User Information Modifications
@@ -345,6 +353,33 @@ Déployer des règles spécifiques (CIS) pour auditd afin d'assurer une surveill
 ```bash
 sudo augenrules --load
 sudo systemctl restart auditd || true
+```
+
+### **5.5 Configuration du Démon Auditd**
+
+Afin de prévenir la perte de journaux et de configurer les avertissements liés à l'espace disque, éditez `/etc/audit/auditd.conf` :
+
+```bash
+sudo sed -i 's/^max_log_file_action.*/max_log_file_action = keep_logs/' /etc/audit/auditd.conf
+sudo sed -i 's/^space_left_action.*/space_left_action = email/' /etc/audit/auditd.conf
+sudo sed -i 's/^action_mail_acct.*/action_mail_acct = root/' /etc/audit/auditd.conf
+sudo sed -i 's/^admin_space_left_action.*/admin_space_left_action = halt/' /etc/audit/auditd.conf
+sudo systemctl restart auditd
+```
+
+### **5.6 Configuration de Journald**
+
+Afin de conserver les logs localement et limiter l'empreinte disque via la compression.
+
+```bash
+sudo mkdir -p /etc/systemd/journald.conf.d
+sudo bash -c 'cat <<EOF > /etc/systemd/journald.conf.d/60-cis-journald.conf
+[Journal]
+Compress=yes
+Storage=persistent
+ForwardToSyslog=no
+EOF'
+sudo systemctl restart systemd-journald
 ```
 
 ## **Phase 6: Bannières et Avertissements Légaux**
@@ -583,26 +618,59 @@ sudo bash -c 'cat <<EOF > /etc/sudoers.d/00-cis-hardening
 
 ### **10.3 Politique des Mots de Passe (PAM)**
 
-Imposer une politique stricte sur la complexité et l'expiration des mots de passe.
+Imposer une politique stricte sur la complexité, l'historique et l'expiration des mots de passe.
 
 ```bash
 sudo apt install -y libpam-runtime libpam-modules libpam-pwquality
 ```
 
-# Configurer la complexité
+**Configurer la complexité (pwquality)**
 
 ```bash
+sudo mkdir -p /etc/security/pwquality.conf.d
 sudo bash -c 'cat <<EOF > /etc/security/pwquality.conf.d/60-hardening-pw.conf
- difok = 2
- minlen = 14
- minclass = 3
- dcredit = -1
- ucredit = -1
- ocredit = -1
- lcredit = -1
- maxrepeat = 3
- maxsequence = 3
- EOF'
+difok = 2
+minlen = 14
+minclass = 3
+dcredit = -1
+ucredit = -1
+ocredit = -1
+lcredit = -1
+maxrepeat = 3
+maxsequence = 3
+dictcheck = 1
+enforce_for_root = yes
+EOF'
+```
+
+**Configurer l'historique des mots de passe (pwhistory)**
+
+```bash
+sudo bash -c 'cat <<EOF > /usr/share/pam-configs/pwhistory
+Name: pwhistory
+Default: yes
+Priority: 1024
+Password-Type: Primary
+Password:
+ requisite pam_pwhistory.so remember=24 enforce_for_root use_authtok
+EOF'
+sudo pam-auth-update --enable pwhistory
+```
+
+### **10.3.1 Sécurisation des Fichiers d'Authentification**
+
+Restreindre les permissions sur les fichiers sensibles du système :
+
+```bash
+sudo chown root:shadow /etc/shadow /etc/shadow- /etc/gshadow /etc/gshadow-
+sudo chmod 0640 /etc/shadow /etc/shadow- /etc/gshadow /etc/gshadow-
+
+sudo chown root:root /etc/shells
+sudo chmod 0644 /etc/shells
+
+sudo touch /etc/security/opasswd
+sudo chown root:root /etc/security/opasswd
+sudo chmod 0600 /etc/security/opasswd
 ```
 
 **Actions complémentaires :**
@@ -633,7 +701,7 @@ awk -F: '$3 < 1000 && $7 != "/usr/sbin/nologin" && $7 != "/bin/false" {print $1}
 
 ### **10.5 Politique de verrouillage de compte (pam_faillock)**
 
-Bloquer les comptes après plusieurs tentatives de connexion échouées.
+Bloquer les comptes après plusieurs tentatives de connexion échouées en utilisant des profils PAM structurellement sécurisés.
 
 ```bash
 sudo apt install -y libpam-modules
@@ -642,7 +710,32 @@ deny = 5
 unlock_time = 900
 even_deny_root
 EOF'
-sudo pam-auth-update --enable faillock
+
+# Suppression des anciens profils s'ils existent
+sudo rm -f /usr/share/pam-configs/faillock /usr/share/pam-configs/faillock_notify
+
+# Création du profil preauth
+sudo bash -c 'cat <<EOF > /usr/share/pam-configs/faillock_preauth
+Name: Faillock pre-auth check
+Default: yes
+Priority: 1024
+Auth-Type: Primary
+Auth:
+    required pam_faillock.so preauth silent deny=5 unlock_time=900
+EOF'
+
+# Création du profil authfail
+sudo bash -c 'cat <<EOF > /usr/share/pam-configs/faillock_authfail
+Name: Faillock authfail processing
+Default: yes
+Priority: 0
+Auth-Type: Primary
+Auth:
+    [default=die] pam_faillock.so authfail
+EOF'
+
+# Mettre à jour les fichiers PAM
+sudo pam-auth-update --package
 ```
 
 ### **10.6 Sécurité des profils utilisateurs (TMOUT et umask)**
