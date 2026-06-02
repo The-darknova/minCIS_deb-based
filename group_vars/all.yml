@@ -74,3 +74,9 @@ hardening_time_sync: false
 
 # Toggles strict cron access controls.
 hardening_cron_allow: true
+
+# Toggles PAM password history (pwhistory).
+hardening_pam_pwhistory: false
+
+# Toggles auditd space warning actions.
+hardening_auditd_space_warn: false

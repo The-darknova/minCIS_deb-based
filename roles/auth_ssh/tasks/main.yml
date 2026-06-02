@@ -108,6 +108,7 @@
           lcredit = -1
           maxrepeat = 3
           maxsequence = 3
+          dictcheck = 1
           enforce_for_root = yes
         mode: '0644'
         owner: root
@@ -131,6 +132,33 @@
         - /etc/pam.d/common-auth
         - /etc/pam.d/common-password
 
+    - name: Ensure permissions on shadow and gshadow files are configured
+      ansible.builtin.file:
+        path: "{{ item }}"
+        owner: root
+        group: shadow
+        mode: '0640'
+      loop:
+        - /etc/shadow
+        - /etc/shadow-
+        - /etc/gshadow
+        - /etc/gshadow-
+
+    - name: Ensure permissions on /etc/shells are configured
+      ansible.builtin.file:
+        path: /etc/shells
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Ensure permissions on /etc/security/opasswd are configured
+      ansible.builtin.file:
+        path: /etc/security/opasswd
+        owner: root
+        group: root
+        mode: '0600'
+        state: touch
+
 - name: PAM Account Lockout Hardening (Faillock)
   when: hardening_pam_faillock | bool
   block:
@@ -150,10 +178,67 @@
         owner: root
         group: root
 
-    - name: Enable faillock in PAM via pam-auth-update
-      ansible.builtin.command: pam-auth-update --enable faillock
-      register: faillock_output
-      changed_when: "'changed' in faillock_output.stdout or faillock_output.rc == 0"
+    - name: Remove old broken faillock profiles
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /usr/share/pam-configs/faillock
+        - /usr/share/pam-configs/faillock_notify
+
+    - name: Create unified faillock preauth profile
+      ansible.builtin.copy:
+        dest: /usr/share/pam-configs/faillock_preauth
+        content: |
+          Name: Faillock pre-auth check
+          Default: yes
+          Priority: 1024
+          Auth-Type: Primary
+          Auth:
+              required pam_faillock.so preauth silent deny=5 unlock_time=900
+        mode: '0644'
+        owner: root
+        group: root
+
+    - name: Create unified faillock authfail profile
+      ansible.builtin.copy:
+        dest: /usr/share/pam-configs/faillock_authfail
+        content: |
+          Name: Faillock authfail processing
+          Default: yes
+          Priority: 0
+          Auth-Type: Primary
+          Auth:
+              [default=die] pam_faillock.so authfail
+        mode: '0644'
+        owner: root
+        group: root
+
+    - name: Force update of PAM configuration files
+      ansible.builtin.command: pam-auth-update --package
+      changed_when: true
+
+- name: PAM Password History Hardening (pwhistory)
+  when: hardening_pam_pwhistory | bool
+  block:
+    - name: Configure pwhistory profile
+      ansible.builtin.copy:
+        dest: /usr/share/pam-configs/pwhistory
+        content: |
+          Name: pwhistory
+          Default: yes
+          Priority: 1024
+          Password-Type: Primary
+          Password:
+            requisite pam_pwhistory.so remember=24 enforce_for_root use_authtok
+        mode: '0644'
+        owner: root
+        group: root
+
+    - name: Enable pwhistory in PAM via pam-auth-update
+      ansible.builtin.command: pam-auth-update --enable pwhistory
+      register: pwhistory_output
+      changed_when: "'changed' in pwhistory_output.stdout or pwhistory_output.rc == 0"
 
 - name: Profile Security Hardening
   when: hardening_profile_secure | bool

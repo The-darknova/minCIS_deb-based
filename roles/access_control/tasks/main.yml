@@ -55,6 +55,34 @@
         replace: 'GRUB_CMDLINE_LINUX="\1 audit=1"'
       notify: Update GRUB
 
+    - name: Ensure audit_backlog_limit is sufficient
+      ansible.builtin.replace:
+        path: /etc/default/grub
+        regexp: '^GRUB_CMDLINE_LINUX="(?!.*audit_backlog_limit=8192)(.*)"$'
+        replace: 'GRUB_CMDLINE_LINUX="\1 audit_backlog_limit=8192"'
+      notify: Update GRUB
+
+    - name: Ensure audit logs are not automatically deleted
+      ansible.builtin.lineinfile:
+        path: /etc/audit/auditd.conf
+        regexp: '^max_log_file_action\s*='
+        line: 'max_log_file_action = keep_logs'
+        state: present
+      notify: Restart Auditd
+
+    - name: Ensure system warns when audit logs are low on space
+      when: hardening_auditd_space_warn | bool
+      ansible.builtin.lineinfile:
+        path: /etc/audit/auditd.conf
+        regexp: '^{{ item.key }}\s*='
+        line: '{{ item.key }} = {{ item.value }}'
+        state: present
+      loop:
+        - { key: 'space_left_action', value: 'email' }
+        - { key: 'action_mail_acct', value: 'root' }
+        - { key: 'admin_space_left_action', value: 'halt' }
+      notify: Restart Auditd
+
     - name: Deploy CIS auditd rules
       ansible.builtin.copy:
         src: 60-cis-auditd.rules
@@ -63,3 +91,22 @@
         owner: root
         group: root
       notify: Restart Auditd
+
+- name: Journald Configuration
+  block:
+    - name: Ensure journald drop-in directory exists
+      ansible.builtin.file:
+        path: /etc/systemd/journald.conf.d
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+
+    - name: Deploy CIS journald configuration
+      ansible.builtin.copy:
+        src: 60-cis-journald.conf
+        dest: /etc/systemd/journald.conf.d/60-cis-journald.conf
+        mode: '0644'
+        owner: root
+        group: root
+      notify: Restart Journald

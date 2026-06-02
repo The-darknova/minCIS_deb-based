@@ -27,6 +27,7 @@
 -w /etc/issue.net -p wa -k system-locale
 -w /etc/hosts -p wa -k system-locale
 -w /etc/network -p wa -k system-locale
+-w /etc/networks -p wa -k system-locale
 
 ## =========================================================
 ## MAC Policy (AppArmor)
@@ -38,14 +39,15 @@
 ## Logins and Logouts
 ## =========================================================
 -w /var/log/lastlog -p wa -k logins
--w /var/run/faillog -p wa -k logins
+-w /var/log/faillog -p wa -k logins
+-w /var/log/tallylog -p wa -k logins
 
 ## =========================================================
 ## Session Initiation Information
 ## =========================================================
 -w /var/run/utmp -p wa -k session
--w /var/log/wtmp -p wa -k logins
--w /var/log/btmp -p wa -k logins
+-w /var/log/wtmp -p wa -k session
+-w /var/log/btmp -p wa -k session
 
 ## =========================================================
 ## Identity and User Information Modifications
@@ -66,6 +68,12 @@
 ## System Administrator Actions (sudo log)
 ## =========================================================
 -w /var/log/sudo.log -p wa -k actions
+
+## =========================================================
+## Actions as Another User (User Emulation)
+## =========================================================
+-a always,exit -F arch=b64 -S execve -C uid!=euid -F euid=0 -k user_emulation
+-a always,exit -F arch=b32 -S execve -C uid!=euid -F euid=0 -k user_emulation
 
 ## =========================================================
 ## Discretionary Access Control (DAC) Permissions

@@ -20,9 +20,8 @@
         group: root
 
     - name: Remove exotic protocols from active kernel
-      community.general.modprobe:
-        name: "{{ item }}"
-        state: absent
+      ansible.builtin.command:
+        cmd: modprobe -r {{ item }} 2>/dev/null && rmmod {{ item }} 2>/dev/null
       loop:
         - dccp
         - tipc
