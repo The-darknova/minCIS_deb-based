@@ -30,6 +30,7 @@
         sysctl_file: /etc/sysctl.d/60-apparmor-namespace.conf
         state: present
         reload: yes
+        ignore_errors: true
 
 - name: Auditd Installation and Enforcement
   when: hardening_auditd_enable | bool
