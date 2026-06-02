@@ -67,7 +67,7 @@ The main playbook targets the `test_nodes` group and executes the following role
 7. **`network_firewall`**:
    - Blacklists exotic networking protocols (dccp, tipc, rds, sctp).
    - Secures the TCP/IP stack via Sysctl (disables IP forwarding, enables SYN cookies, logs martians).
-   - Installs and configures **UFW** (Uncomplicated Firewall) with a default allow-out/deny-in/deny-routed policy.
+   - Installs and configures **UFW** (Uncomplicated Firewall) with a strict default deny-all (in/out/routed) policy, explicitly allowing only outbound DNS and Web traffic.
 
 8. **`auth_ssh`**:
    - Deploys legal warning banners (`/etc/issue`, `/etc/motd`).
