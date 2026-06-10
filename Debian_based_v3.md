@@ -536,7 +536,7 @@ sudo bash -c 'cat <<EOF >> /etc/sysctl.d/60-network-hardening.conf
  net.ipv6.conf.default.accept_source_route = 0
  sysctl net.ipv4.conf.default.log_martians = 1
  sysctl net.ipv4.conf.all.log_martians = 1
- EOF'
+ EOF'v
  sudo sysctl --system
 ```
 
