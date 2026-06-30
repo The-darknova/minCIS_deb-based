@@ -1,4 +1,4 @@
-# Debian based hardening [v3]
+# Debian based hardening [v4]
 
 # **Guide de Durcissement (Hardening) pour Systèmes Debian-based**
 
@@ -239,7 +239,7 @@ Déployer des règles spécifiques (CIS) pour auditd afin d'assurer une surveill
 -f 1
 
 ## =========================================================
-## Time and Date Modification 
+## Time and Date Modification
 ## =========================================================
 -a always,exit -F arch=b64 -S adjtimex,settimeofday,clock_settime -k time-change
 -a always,exit -F arch=b32 -S adjtimex,settimeofday,clock_settime -k time-change
@@ -357,7 +357,7 @@ sudo systemctl restart auditd || true
 
 ### **5.5 Configuration du Démon Auditd**
 
-Afin de prévenir la perte de journaux et de configurer les avertissements liés à l'espace disque, éditez `/etc/audit/auditd.conf` :
+Afin de prévenir la perte de journaux et de configurer les avertissements liés à l'espace disque, éditez `/etc/audit/auditd.conf` :
 
 ```bash
 sudo sed -i 's/^max_log_file_action.*/max_log_file_action = keep_logs/' /etc/audit/auditd.conf
@@ -406,7 +406,7 @@ sudo chown root:root /etc/motd /etc/issue /etc/issue.net
 sudo chmod 644 /etc/motd /etc/issue /etc/issue.net
 ```
 
-## **Phase 7 & 8: Suppression des Services Inutiles****
+## **Phase 7 & 8: Suppression des Services Inutiles***
 
 Un serveur sécurisé ne doit faire tourner que ce dont il a besoin.
 
@@ -463,10 +463,10 @@ sudo apt-get update -qq && \
 
 ### **8.2 Sécurisation du serveur Mail (MTA)**
 
-Si votre serveur ne sert pas de relais mail, le MTA (Postfix/Exim) ne doit écouter que sur localhost (127.0.0.1).
+Si le serveur ne sert pas de relais mail, le MTA (Postfix/Exim) ne doit écouter que sur localhost (127.0.0.1).
 
-- **Vérification**: `sudo ss -plntu | grep -E ":(25|465|587)"`
-- **Remédiation (Exemple Postfix) :** Dans `/etc/postfix/main.cf`, définissez inet_interfaces = loopback-only, puis redémarrez Postfix.
+- **Vérification**: `sudo ss -plntu | grep -E ":(25|465|587)"`
+- **Remédiation (Exemple Postfix) :** Dans `/etc/postfix/main.cf`, définissez inet_interfaces = loopback-only, puis redémarrez Postfix.
 
 ### **8.3 Corriger les permission de crontab**
 
@@ -534,9 +534,9 @@ sudo bash -c 'cat <<EOF >> /etc/sysctl.d/60-network-hardening.conf
  net.ipv4.conf.default.accept_source_route = 0
  net.ipv6.conf.all.accept_source_route = 0
  net.ipv6.conf.default.accept_source_route = 0
- sysctl net.ipv4.conf.default.log_martians = 1
- sysctl net.ipv4.conf.all.log_martians = 1
- EOF'v
+ net.ipv4.conf.default.log_martians = 1
+ net.ipv4.conf.all.log_martians = 1
+ EOF'
  sudo sysctl --system
 ```
 
@@ -559,7 +559,8 @@ sudo apt -y purge iptables iptables-persistent nftables
  ufw allow out 80/tcp
  ufw allow out 443/tcp
  ufw allow out 53/tcp
- ufw allow out 53/udp'
+ ufw allow out 53/udp
+ ufw allow out 123/udp'
  sudo ufw --force enable
 ```
 
