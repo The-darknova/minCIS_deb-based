@@ -70,13 +70,13 @@ hardening_profile_secure: true
 hardening_auditd_rules: true
 
 # Toggles time synchronization (Chrony).
-hardening_time_sync: false
+hardening_time_sync: true
 
 # Toggles strict cron access controls.
 hardening_cron_allow: true
 
 # Toggles PAM password history (pwhistory).
-hardening_pam_pwhistory: false
+hardening_pam_pwhistory: true
 
 # Toggles auditd space warning actions.
 hardening_auditd_space_warn: false
