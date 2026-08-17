@@ -1,6 +1,6 @@
 ---
 - name: Debian-based linux System Hardening
-  hosts: test_nodes
+  hosts: production_nodes
   become: true
   vars_files:
     - group_vars/all.yml
