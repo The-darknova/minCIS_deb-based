@@ -4,7 +4,7 @@
   become: true
   vars_files:
     - group_vars/all.yml
-    - group_vars/all_secrets.yml
+    # - group_vars/all_secrets.yml
   roles:
     - common_handlers
     - filesystem
