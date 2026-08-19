@@ -5,6 +5,10 @@ group_vars/all_secrets.yml
 *secrets*.yml
 *secret*.yml
 
+# venv
+.venv/
+venv/
+
 # IDE / OS
 .vscode/
 .idea/
