@@ -542,25 +542,20 @@ sudo bash -c 'cat <<EOF >> /etc/sysctl.d/60-network-hardening.conf
 
 ### **9.4 Configuration du Pare-feu (UFW)**
 
-Remplacement de Iptables classique par UFW avec une politique de type "Deny All / Allow Exception".
+Remplacement de Iptables classique par UFW avec une politique de type "Default Deny All/Default Allow Outgoing".
 
 ```bash
 sudo apt -y purge iptables iptables-persistent nftables
  sudo apt install -y ufw
  sudo systemctl enable --now ufw
  sudo bash -c 'ufw default deny incoming
- ufw default deny outgoing
+ ufw default allow outgoing
  ufw default deny routed
  ufw allow in on lo
  ufw allow out on lo
  ufw deny in from 127.0.0.0/8
  ufw deny in from ::1
- ufw allow in proto tcp from any to any port 22
- ufw allow out 80/tcp
- ufw allow out 443/tcp
- ufw allow out 53/tcp
- ufw allow out 53/udp
- ufw allow out 123/udp'
+ ufw allow in proto tcp from any to any port 22'
  sudo ufw --force enable
 ```
 

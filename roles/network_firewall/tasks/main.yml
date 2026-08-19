@@ -89,7 +89,7 @@
         direction: "{{ item.direction }}"
       loop:
         - { direction: incoming, default: deny }
-        - { direction: outgoing, default: deny }
+        - { direction: outgoing, default: allow }
         - { direction: routed, default: deny }
       ignore_errors: true
 
@@ -116,16 +116,3 @@
         rule: allow
         port: '22'
         proto: tcp
-
-    - name: Allow outgoing web and DNS traffic
-      community.general.ufw:
-        rule: allow
-        direction: out
-        port: "{{ item.port }}"
-        proto: "{{ item.proto }}"
-      loop:
-        - { port: '80', proto: tcp }
-        - { port: '443', proto: tcp }
-        - { port: '53', proto: tcp }
-        - { port: '53', proto: udp }
-        - { port: '123', proto: udp }
