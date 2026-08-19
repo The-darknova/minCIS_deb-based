@@ -30,3 +30,4 @@
         name: chrony
         enabled: yes
         state: started
+      ignore_errors: true

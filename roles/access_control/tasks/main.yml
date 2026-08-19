@@ -30,7 +30,7 @@
         sysctl_file: /etc/sysctl.d/60-apparmor-namespace.conf
         state: present
         reload: yes
-        ignore_errors: true
+        ignoreerrors: true
 
 - name: Auditd Installation and Enforcement
   when: hardening_auditd_enable | bool
@@ -70,6 +70,7 @@
         line: 'max_log_file_action = keep_logs'
         state: present
       notify: Restart Auditd
+      ignore_errors: true
 
     - name: Ensure system warns when audit logs are low on space
       when: hardening_auditd_space_warn | bool

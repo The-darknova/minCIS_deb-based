@@ -21,8 +21,10 @@
   ansible.builtin.systemd:
     name: chrony
     state: restarted
+  ignore_errors: true
 
 - name: Restart Journald
   ansible.builtin.systemd:
     name: systemd-journald
     state: restarted
+  ignore_errors: true

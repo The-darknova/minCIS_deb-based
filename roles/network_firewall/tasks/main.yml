@@ -91,7 +91,6 @@
         - { direction: incoming, default: deny }
         - { direction: outgoing, default: allow }
         - { direction: routed, default: deny }
-      ignore_errors: true
 
     - name: Allow UFW loopback traffic
       community.general.ufw:
@@ -101,6 +100,7 @@
       loop:
         - in
         - out
+      ignore_errors: true
 
     - name: Deny local subnets from external
       community.general.ufw:
