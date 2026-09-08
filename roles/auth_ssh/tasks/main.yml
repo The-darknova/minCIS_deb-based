@@ -70,7 +70,8 @@
         dest: /etc/sudoers.d/00-cis-hardening
         content: |
           Defaults use_pty
-          Defaults logfile="/var/log/sudo.log"
+          Defaults timestamp_timeout=10
+          Defaults logfile= /var/log/sudo.log
         mode: '0440'
         owner: root
         group: root

@@ -20,14 +20,14 @@
         group: root
 
     - name: Remove exotic protocols from active kernel
-      ansible.builtin.command:
-        cmd: modprobe -r {{ item }} 2>/dev/null && rmmod {{ item }} 2>/dev/null
+      ansible.builtin.shell:
+        cmd: modprobe -r {{ item }} 2>/dev/null || true; rmmod {{ item }} 2>/dev/null || true
       loop:
         - dccp
         - tipc
         - rds
         - sctp
-      ignore_errors: true
+      changed_when: false
 
 - name: Network Sysctl Hardening
   when: hardening_network_sysctl | bool
